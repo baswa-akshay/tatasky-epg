@@ -1,9 +1,7 @@
 {
-  "version": 2,
-  "routes": [
-    {
-      "src": "/api/epg",
-      "dest": "/api/epg.js"
+  "functions": {
+    "api/*.py": {
+      "runtime": "python3.9"
     }
-  ]
+  }
 }
