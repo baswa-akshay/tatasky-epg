@@ -17,8 +17,7 @@ def download_and_extract_epg(url):
 
 def convert_to_ist(time_str):
     dt = datetime.strptime(time_str, "%Y%m%d%H%M%S %z")
-    ist = dt.astimezone(pytz.timezone('Asia/Kolkata'))
-    return ist
+    return dt.astimezone(pytz.timezone('Asia/Kolkata'))
 
 def get_current_and_upcoming_epg(xml_data, channel_id):
     xml_root = ET.fromstring(xml_data)
@@ -57,8 +56,8 @@ def get_current_and_upcoming_epg(xml_data, channel_id):
                 'desc': programme.find("desc").text if programme.find("desc") is not None else "N/A",
                 'start': start_time.strftime('%Y-%m-%d %H:%M:%S'),
                 'stop': stop_time.strftime('%Y-%m-%d %H:%M:%S'),
-                'startTime': start_time.isoformat(),
-                'stopTime': stop_time.isoformat(),
+                'startTime': start_time,  # Keep as datetime object
+                'stopTime': stop_time,      # Keep as datetime object
                 'icon': programme.find("icon").attrib['src'] if programme.find("icon") is not None else None
             })
 
