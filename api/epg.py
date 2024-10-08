@@ -3,12 +3,22 @@ import gzip
 import io
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+from fastapi.middleware.cors import CORSMiddleware  # Import CORS middleware
 from datetime import datetime
 import pytz
-import json
 import xml.etree.ElementTree as ET
 
 app = FastAPI()
+
+# Allow CORS for all origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
 
 def download_and_extract_epg(url):
     response = requests.get(url)
@@ -99,6 +109,6 @@ async def get_epg(id: int):
     # Get EPG data for the requested channel
     epg_data = get_current_and_upcoming_epg(xml_data, channel_id)
 
-    response_content = json.dumps(epg_data, indent=4)
-    # Return response as pretty-printed JSON
-    return JSONResponse(content=epg_data, media_type="application/json")
+    # Return pretty-printed JSON response using jsonable_encoder
+    return JSONResponse(content=jsonable_encoder(epg_data), media_type="application/json")
+    
