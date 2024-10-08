@@ -58,7 +58,7 @@ def get_current_and_upcoming_epg(xml_data, channel_id):
             continue
 
     if channel_info is None:
-        raise HTTPException(status_code=404, detail=f"Channel ID '{channel_id}' not found in EPG.")
+        raise HTTPException(status_code=404, detail={"error": {"code": "404", "message": "Channel not found."}})
 
     programs = []
     # Get program information
@@ -92,10 +92,11 @@ def get_current_and_upcoming_epg(xml_data, channel_id):
                 next_program = program
                 break
 
+    # Return channel info with null for Current and Upcoming if not found
     return {
         'Channel': channel_info,
-        'Current': current_program,
-        'Upcoming': next_program
+        'Current': current_program if current_program else None,
+        'Upcoming': next_program if next_program else None
     }
 
 @app.get("/", response_class=HTMLResponse)
@@ -297,7 +298,11 @@ async def get_epg(id: int):
     xml_data = download_and_extract_epg(url)
 
     # Get EPG data for the requested channel
-    epg_data = get_current_and_upcoming_epg(xml_data, channel_id)
+    try:
+        epg_data = get_current_and_upcoming_epg(xml_data, channel_id)
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content=e.detail)
 
     # Return pretty-printed JSON response using jsonable_encoder
     return JSONResponse(content=jsonable_encoder(epg_data), media_type="application/json")
+            
