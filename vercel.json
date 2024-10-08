@@ -2,7 +2,7 @@
   "version": 2,
   "routes": [
     {
-      "src": "api/epg",
+      "src": "/api/epg",
       "dest": "/api/epg.js"
     }
   ]
