@@ -61,24 +61,23 @@ def get_current_and_upcoming_epg(xml_data, channel_id):
                 'desc': programme.find("desc").text if programme.find("desc") is not None else "N/A",
                 'start': format_datetime(start_time),  # Convert to string
                 'stop': format_datetime(stop_time),    # Convert to string
-                'startTime': start_time,  # Keep as datetime object for internal use
-                'stopTime': stop_time,      # Keep as datetime object for internal use
                 'icon': programme.find("icon").attrib['src'] if programme.find("icon") is not None else None
             })
 
     # Sort programs by start time
-    programs.sort(key=lambda x: x['startTime'])
+    programs.sort(key=lambda x: x['start'])
 
     # Find current and next program
     for index, program in enumerate(programs):
-        if program['startTime'] <= current_time < program['stopTime']:
+        # Compare string representations of time
+        if program['start'] <= format_datetime(current_time) < program['stop']:
             current_program = program
             next_program = programs[index + 1] if index + 1 < len(programs) else None
             break
 
     if not current_program:  # If no current program found, find the next one
         for program in programs:
-            if program['startTime'] > current_time:
+            if program['start'] > format_datetime(current_time):
                 next_program = program
                 break
 
