@@ -20,6 +20,10 @@ def convert_to_ist(time_str):
     dt = datetime.strptime(time_str, "%Y%m%d%H%M%S %z")
     return dt.astimezone(pytz.timezone('Asia/Kolkata'))
 
+def format_datetime(dt):
+    """Convert datetime to string in a specific format."""
+    return dt.strftime('%Y-%m-%d %H:%M:%S')
+
 def get_current_and_upcoming_epg(xml_data, channel_id):
     xml_root = ET.fromstring(xml_data)
     current_time = datetime.now(pytz.timezone('Asia/Kolkata'))
@@ -55,10 +59,10 @@ def get_current_and_upcoming_epg(xml_data, channel_id):
             programs.append({
                 'title': programme.find("title").text if programme.find("title") is not None else "N/A",
                 'desc': programme.find("desc").text if programme.find("desc") is not None else "N/A",
-                'start': start_time.strftime('%Y-%m-%d %H:%M:%S'),
-                'stop': stop_time.strftime('%Y-%m-%d %H:%M:%S'),
-                'startTime': start_time,  # Keep as datetime object
-                'stopTime': stop_time,      # Keep as datetime object
+                'start': format_datetime(start_time),  # Convert to string
+                'stop': format_datetime(stop_time),    # Convert to string
+                'startTime': start_time,  # Keep as datetime object for internal use
+                'stopTime': stop_time,      # Keep as datetime object for internal use
                 'icon': programme.find("icon").attrib['src'] if programme.find("icon") is not None else None
             })
 
@@ -97,4 +101,3 @@ async def get_epg(id: int):
 
     # Return response as pretty-printed JSON
     return JSONResponse(content=epg_data, media_type="application/json")
-    
