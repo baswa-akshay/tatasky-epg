@@ -29,7 +29,7 @@ def get_current_and_upcoming_epg(xml_data, channel_id):
     channel_info = None
 
     # Get channel information
-    for channel in xml_root.findall("channel"):  # Make sure to use `findall`
+    for channel in xml_root.findall("channel"):
         try:
             if channel.attrib['id'] == channel_id:
                 channel_info = {
@@ -51,8 +51,8 @@ def get_current_and_upcoming_epg(xml_data, channel_id):
         if programme.attrib['channel'] == channel_id:
             start = convert_to_ist(programme.attrib['start'])
             stop = convert_to_ist(programme.attrib['stop'])
-            start_time = datetime.strptime(start, '%Y-%m-%d %H:%M:%S')
-            stop_time = datetime.strptime(stop, '%Y-%m-%d %H:%M:%S')
+            start_time = datetime.strptime(start, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone('Asia/Kolkata'))
+            stop_time = datetime.strptime(stop, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone('Asia/Kolkata'))
 
             programs.append({
                 'title': programme.find("title").text,
