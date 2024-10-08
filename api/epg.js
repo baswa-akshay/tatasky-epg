@@ -10,11 +10,25 @@ async function downloadAndExtractEPG(url) {
     const gzFile = 'epg.xml.gz';
     const xmlFile = 'epg.xml';
 
-    const response = await axios.get(url, { responseType: 'arraybuffer' });
-    fs.writeFileSync(gzFile, response.data);
+    try {
+        // Download the gzipped XML file
+        const response = await axios.get(url, { responseType: 'arraybuffer' });
+        fs.writeFileSync(gzFile, response.data);
+        console.log('EPG file downloaded successfully.');
+    } catch (error) {
+        console.error('Error downloading the EPG:', error);
+        throw new Error('Failed to download EPG file');
+    }
 
-    const xmlContents = zlib.gunzipSync(fs.readFileSync(gzFile));
-    fs.writeFileSync(xmlFile, xmlContents);
+    try {
+        // Extract the gzipped file
+        const xmlContents = zlib.gunzipSync(fs.readFileSync(gzFile));
+        fs.writeFileSync(xmlFile, xmlContents);
+        console.log('EPG file extracted successfully.');
+    } catch (error) {
+        console.error('Error extracting the EPG:', error);
+        throw new Error('Failed to extract EPG file');
+    }
 
     return xmlFile;
 }
@@ -35,7 +49,6 @@ async function getCurrentAndUpcomingEPG(xmlFile, channelId) {
 
     // Get channel information
     const channelInfo = result.tv.channel.find(channel => channel.$.id === channelId);
-
     if (!channelInfo) {
         return null; // Channel not found
     }
@@ -85,9 +98,13 @@ module.exports = async (req, res) => {
     const url = 'https://avkb.short.gy/tsepg.xml.gz';
 
     try {
+        console.log('Downloading and extracting EPG from URL:', url);
         const xmlFile = await downloadAndExtractEPG(url);
-        const epgData = await getCurrentAndUpcomingEPG(xmlFile, channelId);
+        console.log('EPG file downloaded and extracted:', xmlFile);
         
+        const epgData = await getCurrentAndUpcomingEPG(xmlFile, channelId);
+        console.log('EPG data retrieved:', epgData);
+
         // Clean up XML files after processing
         fs.unlinkSync(xmlFile);
         fs.unlinkSync('epg.xml.gz');
@@ -95,7 +112,7 @@ module.exports = async (req, res) => {
         res.setHeader('Content-Type', 'application/json');
         res.status(200).json(epgData);
     } catch (error) {
-        console.error(error);
+        console.error('Error occurred:', error);
         res.status(500).json({ error: 'An error occurred while processing the request.' });
     }
 };
