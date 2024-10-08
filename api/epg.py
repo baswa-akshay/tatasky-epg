@@ -18,7 +18,7 @@ def download_and_extract_epg(url):
 def convert_to_ist(time_str):
     dt = datetime.strptime(time_str, "%Y%m%d%H%M%S %z")
     ist = dt.astimezone(pytz.timezone('Asia/Kolkata'))
-    return ist.strftime('%Y-%m-%d %H:%M:%S')
+    return ist
 
 def get_current_and_upcoming_epg(xml_data, channel_id):
     xml_root = ET.fromstring(xml_data)
@@ -49,19 +49,17 @@ def get_current_and_upcoming_epg(xml_data, channel_id):
     # Get program information
     for programme in xml_root.findall("programme"):
         if programme.attrib['channel'] == channel_id:
-            start = convert_to_ist(programme.attrib['start'])
-            stop = convert_to_ist(programme.attrib['stop'])
-            start_time = datetime.strptime(start, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone('Asia/Kolkata'))
-            stop_time = datetime.strptime(stop, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone('Asia/Kolkata'))
+            start_time = convert_to_ist(programme.attrib['start'])
+            stop_time = convert_to_ist(programme.attrib['stop'])
 
             programs.append({
-                'title': programme.find("title").text,
-                'desc': programme.find("desc").text,
-                'start': start,
-                'stop': stop,
-                'startTime': start_time,
-                'stopTime': stop_time,
-                'icon': programme.find("icon").attrib['src']
+                'title': programme.find("title").text if programme.find("title") is not None else "N/A",
+                'desc': programme.find("desc").text if programme.find("desc") is not None else "N/A",
+                'start': start_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'stop': stop_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'startTime': start_time.isoformat(),
+                'stopTime': stop_time.isoformat(),
+                'icon': programme.find("icon").attrib['src'] if programme.find("icon") is not None else None
             })
 
     # Sort programs by start time
@@ -98,3 +96,4 @@ async def get_epg(id: int):
     epg_data = get_current_and_upcoming_epg(xml_data, channel_id)
 
     return epg_data
+    
