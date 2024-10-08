@@ -1,0 +1,9 @@
+{
+  "name": "tatasky-epg",
+  "version": "1.0.0",
+  "main": "api/epg.js",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "xml2js": "^0.4.23"
+  }
+}
