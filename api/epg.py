@@ -2,6 +2,7 @@ import requests
 import gzip
 import io
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from datetime import datetime
 import pytz
 import xml.etree.ElementTree as ET
@@ -94,5 +95,6 @@ async def get_epg(id: int):
     # Get EPG data for the requested channel
     epg_data = get_current_and_upcoming_epg(xml_data, channel_id)
 
-    return epg_data
+    # Return response as pretty-printed JSON
+    return JSONResponse(content=epg_data, media_type="application/json")
     
