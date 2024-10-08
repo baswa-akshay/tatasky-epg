@@ -9,6 +9,10 @@
         {
             "src": "/api/epg",
             "dest": "api/epg.py"
+        },
+        {
+            "src": "/",
+            "dest": "api/epg.py"  // This points to your FastAPI app for the root route
         }
     ]
 }
