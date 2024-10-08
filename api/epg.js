@@ -1,43 +1,20 @@
-// Enable error handling
-process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err);
-});
-process.on('unhandledRejection', (reason) => {
-    console.error('Unhandled Rejection:', reason);
-});
-
-// Import required modules
-const https = require('https');
+const axios = require('axios');
 const fs = require('fs');
 const zlib = require('zlib');
 const { parseStringPromise } = require('xml2js');
 
 // Function to download and extract the XML file
-function downloadAndExtractEPG(url) {
-    return new Promise((resolve, reject) => {
-        const gzFile = 'epg.xml.gz';
-        const xmlFile = 'epg.xml';
+async function downloadAndExtractEPG(url) {
+    const gzFile = '/tmp/epg.xml.gz'; // Use the /tmp directory in Vercel
+    const xmlFile = '/tmp/epg.xml'; // Use the /tmp directory in Vercel
 
-        const file = fs.createWriteStream(gzFile);
-        https.get(url, (response) => {
-            response.pipe(file);
-            file.on('finish', () => {
-                file.close(() => {
-                    // Extract the .gz file
-                    fs.createReadStream(gzFile)
-                        .pipe(zlib.createGunzip())
-                        .pipe(fs.createWriteStream(xmlFile))
-                        .on('finish', () => {
-                            resolve(xmlFile);
-                        })
-                        .on('error', (err) => reject(err));
-                });
-            });
-        }).on('error', (err) => {
-            fs.unlink(gzFile); // Delete the file async. (if error)
-            reject(err);
-        });
-    });
+    const response = await axios.get(url, { responseType: 'arraybuffer' });
+    fs.writeFileSync(gzFile, response.data);
+
+    const xmlContents = zlib.gunzipSync(fs.readFileSync(gzFile));
+    fs.writeFileSync(xmlFile, xmlContents);
+
+    return xmlFile;
 }
 
 // Function to convert time to IST
@@ -95,25 +72,23 @@ async function getCurrentAndUpcomingEPG(xmlFile, channelId) {
     };
 }
 
-// Main script logic to handle requests
-async function handleRequest(req, res) {
-    const url = 'https://avkb.short.gy/tsepg.xml.gz';
+// Main function to handle requests
+module.exports = async (req, res) => {
     const channelId = req.query.id ? 'ts' + req.query.id : null;
 
     if (!channelId) {
         return res.status(400).json({ error: 'Channel ID is missing.' });
     }
 
+    const url = 'https://avkb.short.gy/tsepg.xml.gz';
+
     try {
-        // Download and extract the XML file (no caching, always get the latest)
         const xmlFile = await downloadAndExtractEPG(url);
-
-        // Get the current and upcoming EPG data for the requested channel
         const epgData = await getCurrentAndUpcomingEPG(xmlFile, channelId);
-
+        
         // Clean up XML files after processing
-        fs.unlinkSync(xmlFile); // Remove the XML file after use
-        fs.unlinkSync('epg.xml.gz'); // Remove the gzipped file after use
+        fs.unlinkSync(xmlFile);
+        fs.unlinkSync('/tmp/epg.xml.gz');
 
         res.setHeader('Content-Type', 'application/json');
         res.status(200).json(epgData);
@@ -121,24 +96,5 @@ async function handleRequest(req, res) {
         console.error(error);
         res.status(500).json({ error: 'An error occurred while processing the request.' });
     }
-}
-
-// Example usage (HTTP server simulation)
-// You can replace this with your actual server logic
-const http = require('http');
-const url = require('url');
-
-const server = http.createServer((req, res) => {
-    const query = url.parse(req.url, true).query;
-    if (req.method === 'GET' && req.url.startsWith('/epg')) {
-        handleRequest({ query }, res);
-    } else {
-        res.statusCode = 404;
-        res.end('Not Found');
-    }
-});
-
-server.listen(3000, () => {
-    console.log('Server is listening on port 3000');
-});
-                
+};
+                                                                                                        
