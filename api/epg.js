@@ -1,36 +1,43 @@
-// api/epg.js
+// Enable error handling
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled Rejection:', reason);
+});
 
-const axios = require('axios');
+// Import required modules
+const https = require('https');
 const fs = require('fs');
 const zlib = require('zlib');
 const { parseStringPromise } = require('xml2js');
 
 // Function to download and extract the XML file
-async function downloadAndExtractEPG(url) {
-    const gzFile = 'epg.xml.gz';
-    const xmlFile = 'epg.xml';
+function downloadAndExtractEPG(url) {
+    return new Promise((resolve, reject) => {
+        const gzFile = 'epg.xml.gz';
+        const xmlFile = 'epg.xml';
 
-    try {
-        // Download the gzipped XML file
-        const response = await axios.get(url, { responseType: 'arraybuffer' });
-        fs.writeFileSync(gzFile, response.data);
-        console.log('EPG file downloaded successfully.');
-    } catch (error) {
-        console.error('Error downloading the EPG:', error);
-        throw new Error('Failed to download EPG file');
-    }
-
-    try {
-        // Extract the gzipped file
-        const xmlContents = zlib.gunzipSync(fs.readFileSync(gzFile));
-        fs.writeFileSync(xmlFile, xmlContents);
-        console.log('EPG file extracted successfully.');
-    } catch (error) {
-        console.error('Error extracting the EPG:', error);
-        throw new Error('Failed to extract EPG file');
-    }
-
-    return xmlFile;
+        const file = fs.createWriteStream(gzFile);
+        https.get(url, (response) => {
+            response.pipe(file);
+            file.on('finish', () => {
+                file.close(() => {
+                    // Extract the .gz file
+                    fs.createReadStream(gzFile)
+                        .pipe(zlib.createGunzip())
+                        .pipe(fs.createWriteStream(xmlFile))
+                        .on('finish', () => {
+                            resolve(xmlFile);
+                        })
+                        .on('error', (err) => reject(err));
+                });
+            });
+        }).on('error', (err) => {
+            fs.unlink(gzFile); // Delete the file async. (if error)
+            reject(err);
+        });
+    });
 }
 
 // Function to convert time to IST
@@ -49,6 +56,7 @@ async function getCurrentAndUpcomingEPG(xmlFile, channelId) {
 
     // Get channel information
     const channelInfo = result.tv.channel.find(channel => channel.$.id === channelId);
+
     if (!channelInfo) {
         return null; // Channel not found
     }
@@ -87,32 +95,50 @@ async function getCurrentAndUpcomingEPG(xmlFile, channelId) {
     };
 }
 
-// Main function to handle requests
-module.exports = async (req, res) => {
+// Main script logic to handle requests
+async function handleRequest(req, res) {
+    const url = 'https://avkb.short.gy/tsepg.xml.gz';
     const channelId = req.query.id ? 'ts' + req.query.id : null;
 
     if (!channelId) {
         return res.status(400).json({ error: 'Channel ID is missing.' });
     }
 
-    const url = 'https://avkb.short.gy/tsepg.xml.gz';
-
     try {
-        console.log('Downloading and extracting EPG from URL:', url);
+        // Download and extract the XML file (no caching, always get the latest)
         const xmlFile = await downloadAndExtractEPG(url);
-        console.log('EPG file downloaded and extracted:', xmlFile);
-        
+
+        // Get the current and upcoming EPG data for the requested channel
         const epgData = await getCurrentAndUpcomingEPG(xmlFile, channelId);
-        console.log('EPG data retrieved:', epgData);
 
         // Clean up XML files after processing
-        fs.unlinkSync(xmlFile);
-        fs.unlinkSync('epg.xml.gz');
+        fs.unlinkSync(xmlFile); // Remove the XML file after use
+        fs.unlinkSync('epg.xml.gz'); // Remove the gzipped file after use
 
         res.setHeader('Content-Type', 'application/json');
         res.status(200).json(epgData);
     } catch (error) {
-        console.error('Error occurred:', error);
+        console.error(error);
         res.status(500).json({ error: 'An error occurred while processing the request.' });
     }
-};
+}
+
+// Example usage (HTTP server simulation)
+// You can replace this with your actual server logic
+const http = require('http');
+const url = require('url');
+
+const server = http.createServer((req, res) => {
+    const query = url.parse(req.url, true).query;
+    if (req.method === 'GET' && req.url.startsWith('/epg')) {
+        handleRequest({ query }, res);
+    } else {
+        res.statusCode = 404;
+        res.end('Not Found');
+    }
+});
+
+server.listen(3000, () => {
+    console.log('Server is listening on port 3000');
+});
+                
