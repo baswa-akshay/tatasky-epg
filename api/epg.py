@@ -1,10 +1,13 @@
 import requests
 import gzip
 import io
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from pydantic import BaseModel
+from typing import Optional
 from datetime import datetime
 import pytz
 import xml.etree.ElementTree as ET
@@ -19,6 +22,14 @@ app.add_middleware(
     allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
     allow_headers=["*"],  # Allow all headers
 )
+
+# Custom error handler for invalid input (non-integer channel id)
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=404,
+        content={"error": {"code": "404", "message": "Channel not found."}},
+    )
 
 def download_and_extract_epg(url):
     response = requests.get(url)
@@ -305,4 +316,3 @@ async def get_epg(id: int):
 
     # Return pretty-printed JSON response using jsonable_encoder
     return JSONResponse(content=jsonable_encoder(epg_data), media_type="application/json")
-            
