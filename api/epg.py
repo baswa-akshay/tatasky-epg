@@ -2,9 +2,9 @@ import requests
 import gzip
 import io
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.encoders import jsonable_encoder
-from fastapi.middleware.cors import CORSMiddleware  # Import CORS middleware
+from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import pytz
 import xml.etree.ElementTree as ET
@@ -98,6 +98,62 @@ def get_current_and_upcoming_epg(xml_data, channel_id):
         'Upcoming': next_program
     }
 
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    content = """
+    <html>
+        <head>
+            <title>EPG API Documentation</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    padding: 20px;
+                    background-color: #f4f4f4;
+                    border-radius: 8px;
+                    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                }
+                h1 {
+                    color: #333;
+                }
+                h2 {
+                    color: #666;
+                }
+                ul {
+                    list-style-type: none;
+                    padding-left: 0;
+                }
+                li {
+                    margin: 10px 0;
+                }
+                code {
+                    background-color: #eee;
+                    padding: 2px 4px;
+                    border-radius: 4px;
+                }
+                pre {
+                    background-color: #eee;
+                    padding: 10px;
+                    border-radius: 4px;
+                    overflow: auto;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>EPG API</h1>
+            <p>Welcome to the EPG API. Use the following endpoints:</p>
+            <h2>Available Endpoints</h2>
+            <ul>
+                <li><strong>/epg?id={channel_id}</strong> - Get the current and upcoming programs for the specified channel.</li>
+            </ul>
+            <h2>Example Usage</h2>
+            <p>To get the EPG for channel ID <code>114</code>, make a GET request to:</p>
+            <pre><code>GET /epg?id=114</code></pre>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=content)
+
 @app.get("/api/epg")
 async def get_epg(id: int):
     channel_id = f'ts{id}'
@@ -111,4 +167,3 @@ async def get_epg(id: int):
 
     # Return pretty-printed JSON response using jsonable_encoder
     return JSONResponse(content=jsonable_encoder(epg_data), media_type="application/json")
-    
